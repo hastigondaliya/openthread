@@ -665,7 +665,7 @@ otError InfraNetif::DiscoverNat64Prefix(uint32_t aInfraIfIndex)
 {
     otError          error = OT_ERROR_NONE;
     struct addrinfo *hints = nullptr;
-    struct gaicb    *reqs[1];
+    struct gaicb    *req   = nullptr;
     struct sigevent  sig;
     int              status;
 
@@ -676,18 +676,18 @@ otError InfraNetif::DiscoverNat64Prefix(uint32_t aInfraIfIndex)
     hints->ai_family   = AF_INET6;
     hints->ai_socktype = SOCK_STREAM;
 
-    reqs[0] = (struct gaicb *)malloc(sizeof(struct gaicb));
-    VerifyOrExit(reqs[0] != nullptr, error = OT_ERROR_NO_BUFS);
-    memset(reqs[0], 0, sizeof(struct gaicb));
-    reqs[0]->ar_name    = kWellKnownIpv4OnlyName;
-    reqs[0]->ar_request = hints;
+    req = (struct gaicb *)malloc(sizeof(struct gaicb));
+    VerifyOrExit(req != nullptr, error = OT_ERROR_NO_BUFS);
+    memset(req, 0, sizeof(struct gaicb));
+    req->ar_name    = kWellKnownIpv4OnlyName;
+    req->ar_request = hints;
 
     memset(&sig, 0, sizeof(struct sigevent));
     sig.sigev_notify          = SIGEV_THREAD;
-    sig.sigev_value.sival_ptr = reqs[0];
+    sig.sigev_value.sival_ptr = req;
     sig.sigev_notify_function = &InfraNetif::DiscoverNat64PrefixDone;
 
-    status = getaddrinfo_a(GAI_NOWAIT, reqs, 1, &sig);
+    status = getaddrinfo_a(GAI_NOWAIT, &req, 1, &sig);
 
     if (status != 0)
     {
@@ -702,7 +702,10 @@ exit:
         {
             freeaddrinfo(hints);
         }
-        free(reqs[0]);
+        if (req)
+        {
+            free(req);
+        }
     }
     return error;
 }
